@@ -271,6 +271,9 @@ A_new = simplify_q_uv_obj_any_G(P_AD_inv @ A_reduced @ P_AD, G)
 B_new = simplify_q_uv_obj_any_G(P_AD_inv @ B_reduced @ P_AD, G)
 C_new = simplify_q_uv_obj_any_G(P_AD_inv @ C_reduced @ P_AD, G)
 
+print(sp.latex(D_new))
+exit()
+
 # sp.pprint(simplify_q_uv_obj_any_G(B_new @ C_new, G))
 # exit()
 
