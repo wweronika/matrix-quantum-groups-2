@@ -62,7 +62,15 @@ subs_dict = {
 
     x_2: 3,
     y_2: 4,
-    z_2: -3 + 1/5,
+    z_2: -3,
+
+    # x_1: 1,
+    # y_1: 1,
+    # z_1: 0,
+
+    # x_2: 1,
+    # y_2: -1,
+    # z_2: 1,
 
     # x_1: 1,
     # y_1: 2,
@@ -148,11 +156,11 @@ B_numpy = sp.lambdify((), B_num, modules="numpy")()
 C_numpy = sp.lambdify((), C_num, modules="numpy")()
 D_numpy = sp.lambdify((), D_num, modules="numpy")()
 
-print(np.round(P1_numpy @ P1_numpy - P1_numpy, 8))
-print(np.round(P1_numpy @ A_numpy - A_numpy @ P1_numpy, 8))
-print(np.round(P1_numpy @ B_numpy - B_numpy @ P1_numpy, 8))
-print(np.round(P1_numpy @ C_numpy - C_numpy @ P1_numpy, 8))
-print(np.round(P1_numpy @ D_numpy - D_numpy @ P1_numpy, 8))
+# print(np.round(P1_numpy @ P1_numpy - P1_numpy, 8))
+# print(np.round(P1_numpy @ A_numpy - A_numpy @ P1_numpy, 8))
+# print(np.round(P1_numpy @ B_numpy - B_numpy @ P1_numpy, 8))
+# print(np.round(P1_numpy @ C_numpy - C_numpy @ P1_numpy, 8))
+# print(np.round(P1_numpy @ D_numpy - D_numpy @ P1_numpy, 8))
 
 rank, M = commutant_basis_rank(B_numpy, C_numpy, include_identity=True, simplify=False)
 M_np = np.array(M.tolist(), dtype=np.complex128)
@@ -162,10 +170,92 @@ print(s)
 s = np.linalg.svd(P1_numpy, compute_uv=False)
 print(s)
 
-s = np.linalg.svd(P2_numpy, compute_uv=False)
+P2complement = np.eye(9) - P2_numpy
+s = np.linalg.svd(P2complement, compute_uv=False)
 print(s)
 
-print(P1_numpy + P2_numpy)
+P3_numpy = np.eye(9) - P1_numpy - P2complement
+s = np.linalg.svd(P3_numpy, compute_uv=False)
+print(s)
+
+# print(np.round(P2complement @ P3_numpy, 6))
+
+import numpy as np
+
+def basis_from_projector(P, rank=3, tol=1e-10):
+    """
+    Returns a numerical basis for im(P).
+
+    For an exact projector, the nonzero singular directions span im(P).
+    """
+    P = np.asarray(P, dtype=np.complex128)
+
+    U, s, Vh = np.linalg.svd(P)
+
+    # Robust numerical rank check
+    r = np.sum(s > tol * max(s[0], 1.0))
+
+    if r != rank:
+        raise ValueError(f"Expected rank {rank}, got numerical rank {r}. Singular values: {s}")
+
+    return U[:, :rank]
+
+
+def block_diagonalising_basis_from_projectors(P1, P2, P3, rank_each=3, tol=1e-10):
+    """
+    Given three pairwise orthogonal rank-3 projectors on a 9-dim space,
+    returns T = [basis(im P1) | basis(im P2) | basis(im P3)].
+
+    Then T^{-1} X T should be block diagonal for every X commuting with all P_i.
+    """
+    Ps = [P1, P2, P3]
+    Ps = [np.asarray(P, dtype=np.complex128) for P in Ps]
+
+    n = Ps[0].shape[0]
+
+    for i, P in enumerate(Ps):
+        if P.shape != (n, n):
+            raise ValueError(f"P{i+1} has shape {P.shape}, expected {(n, n)}")
+
+        idem_err = np.linalg.norm(P @ P - P)
+        if idem_err > tol:
+            raise ValueError(f"P{i+1} is not idempotent. Error: {idem_err}")
+
+    for i in range(3):
+        for j in range(i + 1, 3):
+            orth_err = np.linalg.norm(Ps[i] @ Ps[j])
+            if orth_err > tol:
+                raise ValueError(f"P{i+1} P{j+1} is not zero. Error: {orth_err}")
+
+    bases = [basis_from_projector(P, rank=rank_each, tol=tol) for P in Ps]
+
+    T = np.hstack(bases)
+
+    if T.shape != (n, 3 * rank_each):
+        raise ValueError(f"T has shape {T.shape}, expected {(n, 3 * rank_each)}")
+
+    sT = np.linalg.svd(T, compute_uv=False)
+    if sT[-1] < tol * max(sT[0], 1.0):
+        raise ValueError(f"T is numerically singular. Singular values: {sT}")
+
+    return T
+
+T = block_diagonalising_basis_from_projectors(P1_numpy, P2complement, P3_numpy)
+
+A_blk = np.linalg.inv(T) @ A_numpy @ T
+B_blk = np.linalg.inv(T) @ B_numpy @ T
+C_blk = np.linalg.inv(T) @ C_numpy @ T
+D_blk = np.linalg.inv(T) @ D_numpy @ T
+
+# print(np.round(A_blk, 8))
+# print(np.round(B_blk, 8))
+# print(np.round(C_blk, 8))
+# print(np.round(D_blk, 8))
+
+print(np.round(A_numpy @ A_numpy @ A_numpy, 8))
+print(np.round(D_numpy @ D_numpy @ D_numpy, 8))
+
+# CONCLUSION: still block diagonalisable if D is not nilpotent even if A
 
 
 
