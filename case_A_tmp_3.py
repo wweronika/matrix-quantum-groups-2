@@ -7,6 +7,9 @@ np.set_printoptions(linewidth=np.inf)
 
 import sympy as sp
 
+def to_numpy(object, subs_dict):
+    return sp.lambdify((), object.subs(subs_dict), modules="numpy")()
+
 def commutant_basis_rank(B, C, include_identity=True, simplify=True):
     """
     Checks linear independence of B^2 C and B C^2,
@@ -130,6 +133,15 @@ beta = 3 * g * gamma**2
 
 P1 = alpha * I + beta * B2C + gamma * BC2
 
+print(to_numpy(f, subs_dict))
+print(to_numpy(g, subs_dict))
+print(to_numpy(beta3, subs_dict))
+print(to_numpy(gamma3, subs_dict))
+print(to_numpy(beta, subs_dict))
+print(to_numpy(gamma, subs_dict))
+
+# exit()
+
 alpha = 2/3
 beta3 = -1/(27 * f**2 * g) 
 gamma3 = -1/(27 * f * g**2)
@@ -137,6 +149,10 @@ gamma3 = -1/(27 * f * g**2)
 # beta = beta3 ** (1/3)
 gamma = gamma3 ** (1/3)
 beta = -3 * g * gamma**2
+
+# print(gamma)
+# print(beta)
+# exit()
 
 P2 = alpha * I + beta * B2C + gamma * BC2
 
@@ -171,6 +187,7 @@ s = np.linalg.svd(P1_numpy, compute_uv=False)
 print(s)
 
 P2complement = np.eye(9) - P2_numpy
+# P2complement = P2_numpy
 s = np.linalg.svd(P2complement, compute_uv=False)
 print(s)
 
@@ -242,18 +259,26 @@ def block_diagonalising_basis_from_projectors(P1, P2, P3, rank_each=3, tol=1e-10
 
 T = block_diagonalising_basis_from_projectors(P1_numpy, P2complement, P3_numpy)
 
+s = np.linalg.svd(T, compute_uv=False)
+print(s)
+print(np.round(np.linalg.inv(T) @ T - np.eye(9), 12))
+exit()
+
 A_blk = np.linalg.inv(T) @ A_numpy @ T
 B_blk = np.linalg.inv(T) @ B_numpy @ T
 C_blk = np.linalg.inv(T) @ C_numpy @ T
 D_blk = np.linalg.inv(T) @ D_numpy @ T
 
-# print(np.round(A_blk, 8))
+
+
+print(np.round(A_blk, 3))
 # print(np.round(B_blk, 8))
 # print(np.round(C_blk, 8))
 # print(np.round(D_blk, 8))
 
-print(np.round(A_numpy @ A_numpy @ A_numpy, 8))
-print(np.round(D_numpy @ D_numpy @ D_numpy, 8))
+# print(np.round(A_numpy @ A_numpy @ A_numpy, 8))
+print(np.round(A_blk @ A_blk @ A_blk, 8))
+# print(np.round(D_numpy @ D_numpy @ D_numpy, 8))
 
 # CONCLUSION: still block diagonalisable if D is not nilpotent even if A
 
